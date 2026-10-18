@@ -6,7 +6,9 @@ from google.genai import types
 import speech_recognition as sr
 from gtts import gTTS
 
-st.set_page_config(page_title="AI Tutor", page_icon="🎓", layout="centered")
+st.set_page_config(page_title="AI Tutor | Ubaid Ur Rehman", page_icon="🎓", layout="centered")
+
+OWNER = "Ubaid Ur Rehman"
 
 PROMPT = """Tum ek friendly tutor ho jo live call par students ko parhate ho.
 - Student ki baat dhyan se suno.
@@ -59,6 +61,18 @@ html, body, .stApp, p, label, span, div, button, select {
     color: #f5f3ff !important;
     font-size: 0.92rem;
     margin: 0;
+}
+.hero .owner {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 6px 16px;
+    background: rgba(255, 255, 255, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 999px;
+    color: #ffffff !important;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
 }
 
 /* Card sections */
@@ -143,6 +157,26 @@ div[role="radiogroup"] label p { color: #1f2937 !important; font-weight: 500; }
 }
 .stButton > button:hover { color: #ec4899; border: 0; }
 
+/* Footer */
+.my-footer {
+    margin-top: 36px;
+    padding: 18px 12px;
+    text-align: center;
+    border-top: 1px solid #e0e7ff;
+    color: #6b7280;
+    font-size: 0.85rem;
+}
+.my-footer .name {
+    display: block;
+    margin-top: 4px;
+    font-size: 1rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #6366f1, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
 /* Error / warning boxes */
 [data-testid="stAlert"] { border-radius: 16px; }
 </style>
@@ -151,11 +185,12 @@ div[role="radiogroup"] label p { color: #1f2937 !important; font-weight: 500; }
 st.markdown(CSS, unsafe_allow_html=True)
 
 st.markdown(
-    """
+    f"""
     <div class="hero">
         <div class="emoji">🎓</div>
         <h1>AI Tutor</h1>
         <p>Mic dabao, sawal poochho, aur seekho</p>
+        <span class="owner">✨ Created by {OWNER}</span>
     </div>
     """,
     unsafe_allow_html=True,
@@ -257,3 +292,14 @@ else:
             )
     st.write("")
     st.button("🗑️ Nayi baat shuru karo", on_click=reset_chat)
+
+st.markdown(
+    f"""
+    <div class="my-footer">
+        Made with ❤️ by
+        <span class="name">{OWNER}</span>
+        © 2026 AI Tutor. All rights reserved.
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
