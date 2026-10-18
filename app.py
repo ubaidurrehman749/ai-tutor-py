@@ -13,6 +13,7 @@ PROMPT = """Tum ek friendly tutor ho jo live call par students ko parhate ho.
 - Student ki zubaan (Urdu/English) mein jawab do.
 - Agar pakka nahi pata to saaf bolo, andaaza mat lagao."""
 
+MODEL = "gemini-3.5-flash"
 CODES = {"Urdu": ("ur-PK", "ur"), "English": ("en-US", "en")}
 
 st.title("AI Tutor")
@@ -53,19 +54,24 @@ if audio is not None:
                 )
                 for m in st.session_state.history[-20:]
             ]
-            resp = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=PROMPT,
-                    thinking_config=types.ThinkingConfig(thinking_budget=0),
-                ),
-            )
-            reply = resp.text
-            st.session_state.history.append({"role": "assistant", "content": reply})
-            buf = io.BytesIO()
-            gTTS(reply, lang=CODES[lang][1]).write_to_fp(buf)
-            st.session_state.play = buf.getvalue()
+            try:
+                resp = client.models.generate_content(
+                    model=MODEL,
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        system_instruction=PROMPT,
+                    ),
+                )
+                reply = resp.text or "Maaf kijiye, dobara poochiye."
+                st.session_state.history.append(
+                    {"role": "assistant", "content": reply}
+                )
+                buf = io.BytesIO()
+                gTTS(reply, lang=CODES[lang][1]).write_to_fp(buf)
+                st.session_state.play = buf.getvalue()
+            except Exception as e:
+                st.session_state.history.pop()
+                st.error("Gemini error: " + str(e)[:300])
 
 for m in reversed(st.session_state.history):
     who = "Aap" if m["role"] == "user" else "Tutor"
