@@ -144,4 +144,116 @@ div[role="radiogroup"] label p { color: #1f2937 !important; font-weight: 500; }
 .stButton > button:hover { color: #ec4899; border: 0; }
 
 /* Error / warning boxes */
-[data-testid="stAlert"] {
+[data-testid="stAlert"] { border-radius: 16px; }
+</style>
+"""
+
+st.markdown(CSS, unsafe_allow_html=True)
+
+st.markdown(
+    """
+    <div class="hero">
+        <div class="emoji">🎓</div>
+        <h1>AI Tutor</h1>
+        <p>Mic dabao, sawal poochho, aur seekho</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+for k, v in {"history": [], "last": None, "play": None}.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
+
+
+def reset_chat():
+    st.session_state.history = []
+    st.session_state.play = None
+
+
+client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+
+st.markdown('<div class="label">🌐 Zubaan</div>', unsafe_allow_html=True)
+lang = st.radio("Zubaan", list(CODES.keys()), horizontal=True,
+                label_visibility="collapsed")
+
+st.markdown('<div class="label">🎤 Apna sawal bolo</div>', unsafe_allow_html=True)
+audio = st.audio_input("Mic", label_visibility="collapsed")
+
+if audio is not None:
+    data = audio.getvalue()
+    key = hash(data)
+    if key != st.session_state.last:
+        st.session_state.last = key
+        rec = sr.Recognizer()
+        try:
+            with sr.AudioFile(io.BytesIO(data)) as src:
+                clip = rec.record(src)
+            text = rec.recognize_google(clip, language=CODES[lang][0])
+        except Exception:
+            text = None
+
+        if not text:
+            st.warning("Awaaz samajh nahi aayi, dobara saaf bolo.")
+        else:
+            st.session_state.history.append({"role": "user", "content": text})
+            contents = [
+                types.Content(
+                    role="user" if m["role"] == "user" else "model",
+                    parts=[types.Part(text=m["content"])],
+                )
+                for m in st.session_state.history[-20:]
+            ]
+            try:
+                with st.spinner("Tutor soch raha hai..."):
+                    resp = client.models.generate_content(
+                        model=MODEL,
+                        contents=contents,
+                        config=types.GenerateContentConfig(
+                            system_instruction=PROMPT,
+                        ),
+                    )
+                    reply = resp.text or "Maaf kijiye, dobara poochiye."
+                    st.session_state.history.append(
+                        {"role": "assistant", "content": reply}
+                    )
+                    buf = io.BytesIO()
+                    gTTS(reply, lang=CODES[lang][1]).write_to_fp(buf)
+                    st.session_state.play = buf.getvalue()
+            except Exception as e:
+                st.session_state.history.pop()
+                st.error("Gemini error: " + str(e)[:300])
+
+if st.session_state.play:
+    st.audio(st.session_state.play, format="audio/mp3", autoplay=True)
+    st.session_state.play = None
+
+if not st.session_state.history:
+    st.markdown(
+        """
+        <div class="empty">
+            <div class="big">👋</div>
+            <b>Assalam o Alaikum!</b><br>
+            Upar mic dabao aur apna pehla sawal poochho.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+else:
+    st.markdown('<div class="label">💬 Baat cheet</div>', unsafe_allow_html=True)
+    for m in reversed(st.session_state.history):
+        safe = html.escape(m["content"]).replace("\n", "<br>")
+        if m["role"] == "user":
+            st.markdown(
+                f'<div class="chat-row me"><div class="bubble me" dir="auto">'
+                f'<div class="who">Aap</div>{safe}</div></div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                f'<div class="chat-row bot"><div class="bubble bot" dir="auto">'
+                f'<div class="who">🎓 Tutor</div>{safe}</div></div>',
+                unsafe_allow_html=True,
+            )
+    st.write("")
+    st.button("🗑️ Nayi baat shuru karo", on_click=reset_chat)
