@@ -1,6 +1,7 @@
 import io
 import streamlit as st
-import anthropic
+from google import genai
+from google.genai import types
 import speech_recognition as sr
 from gtts import gTTS
 
@@ -24,7 +25,7 @@ if "last" not in st.session_state:
 if "play" not in st.session_state:
     st.session_state.play = None
 
-client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
 audio = st.audio_input("Mic dabao aur bolo")
 
@@ -45,13 +46,22 @@ if audio is not None:
             st.warning("Awaaz samajh nahi aayi, dobara bolo.")
         else:
             st.session_state.history.append({"role": "user", "content": text})
-            resp = client.messages.create(
-                model="claude-sonnet-4-5",
-                max_tokens=300,
-                system=PROMPT,
-                messages=st.session_state.history[-20:],
+            contents = [
+                types.Content(
+                    role="user" if m["role"] == "user" else "model",
+                    parts=[types.Part(text=m["content"])],
+                )
+                for m in st.session_state.history[-20:]
+            ]
+            resp = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=PROMPT,
+                    thinking_config=types.ThinkingConfig(thinking_budget=0),
+                ),
             )
-            reply = resp.content[0].text
+            reply = resp.text
             st.session_state.history.append({"role": "assistant", "content": reply})
             buf = io.BytesIO()
             gTTS(reply, lang=CODES[lang][1]).write_to_fp(buf)
